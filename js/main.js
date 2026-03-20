@@ -48,14 +48,16 @@ function getMoves() {
     const maxElo = +d3.select("#eloMax").property("value");
     const resultPref = d3.select("#resultFilter").node().value;
     const timeControl = d3.select("#incrementFilter").node().value;
+    
+    
     const filteredGames = allGames.filter(g => {
-        const eloMatch = g.white_elo >= minElo && g.white_elo <= maxElo;
+        const eloMatch = g.white_rating >= minElo && g.white_rating <= maxElo;
         const resultMatch = resultPref === "both" || g.winner === resultPref;
         const timeMatch = timeControl === "all" || g.increment_code === timeControl;
+       
         const moveMatch = moveHistory.every((m, idx) => g.moves[idx] === (getNotation(m.fromX, m.fromY) + getNotation(m.toX, m.toY)));
-        return moveMatch
+        return moveMatch && timeMatch && resultMatch && eloMatch
     });
-    
     const freqCounts = {};
     filteredGames.forEach(g => {
         const nextMove = g.moves[moveHistory.length];
@@ -69,20 +71,7 @@ function getMoves() {
         .slice(0, 5);
 }
 
-function updateVis() {
-    updatePieces();
-    d3.select("#counter").text(`Move Count: ${moveHistory.length}`);
-
-    const historyString = moveHistory.map((m, i) => {
-        const piece = standardNotation[m.type] || '';
-        const moveStr = `${piece}${getNotation(m.toX, m.toY)}`;
-        if (i % 2 === 0) {
-            return `${Math.floor(i / 2) + 1}. ${moveStr}`;
-        }
-        return moveStr;
-    }).join(" ");
-    d3.select("#history-log").text(`Move History: ${historyString}`);
-
+function updateArrows() {
     const movesArray = getMoves();
     const opacityScale = d3.scaleLinear()
     .domain([0, d3.max(movesArray, d => d.count)])
@@ -115,6 +104,21 @@ function updateVis() {
             .style("opacity", 0)
             .remove()
     );
+}
+
+function updateVis() {
+    updatePieces();
+    d3.select("#counter").text(`Move Count: ${moveHistory.length}`);
+    const historyString = moveHistory.map((m, i) => {
+        const piece = standardNotation[m.type] || '';
+        const moveStr = `${piece}${getNotation(m.toX, m.toY)}`;
+        if (i % 2 === 0) {
+            return `${Math.floor(i / 2) + 1}. ${moveStr}`;
+        }
+        return moveStr;
+    }).join(" ");
+    d3.select("#history-log").text(`Move History: ${historyString}`);
+    updateArrows();
     
 }
 
@@ -177,7 +181,6 @@ function move(d, piece, movedX, movedY) {
         updateVis();
     }
 }
-
 
 function updatePieces() {
     const pieceSelection = boardGroup.selectAll(".piece")
@@ -259,3 +262,19 @@ d3.select("#redoBtn").on("click", () => {
         updateVis();
     }
 });
+
+d3.select("#eloMin").on("change", () => {
+    updateArrows();
+})
+
+d3.select("#eloMax").on("change", () => {
+    updateArrows();
+})
+
+d3.select("#resultFilter").on("change", () => {
+    updateArrows();
+})
+
+d3.select("#incrementFilter").on("change", () => {
+    updateArrows();
+})
