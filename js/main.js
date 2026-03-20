@@ -10,9 +10,8 @@ const standardNotation = {
     'pawn': ''
 };
 
-let allGames = []; // Loaded once from CSV
-
-// Load the data
+let allGames = [];
+let redoStack = [];
 d3.csv("./data/processed.csv").then(data => {
     allGames = data.map(d => ({
         ...d,
@@ -21,6 +20,29 @@ d3.csv("./data/processed.csv").then(data => {
     updateVis();
 });
 
+const drag = d3.drag()
+    .on("start", function(event, d) {
+        const piece = d3.select(this);
+        piece.raise();
+        d.startX = d.gridX;
+        d.startY = d.gridY;
+        dx = +piece.attr("x") - event.x;
+        dy = +piece.attr("y") - event.y;
+        d3.select("#drag-tip").remove();
+    })
+    .on("drag", function(event, d) {
+        d3.select(this)
+            .attr("x", event.x + dx)
+            .attr("y", event.y + dy);
+    })
+    .on("end", function(event, d) {
+        const piece = d3.select(this);
+        const movedX = Math.max(0, Math.min(size - 1, Math.round((event.x + dx) / boxSize)));
+        const movedY = Math.max(0, Math.min(size - 1, Math.round((event.y + dy) / boxSize)));
+        move(d, piece, movedX, movedY)
+    });
+
+    
 function getMoves() {
     const minElo = +d3.select("#eloMin").property("value");
     const maxElo = +d3.select("#eloMax").property("value");
@@ -48,12 +70,12 @@ function getMoves() {
 }
 
 function updateVis() {
+    updatePieces();
     d3.select("#counter").text(`Move Count: ${moveHistory.length}`);
 
     const historyString = moveHistory.map((m, i) => {
-        const piece = standardNotation[pieces.find(p => p.id === m.id).type] || '';
-        const location = getNotation(m.toX, m.toY);
-        const moveStr = `${piece}${location}`;
+        const piece = standardNotation[m.type] || '';
+        const moveStr = `${piece}${getNotation(m.toX, m.toY)}`;
         if (i % 2 === 0) {
             return `${Math.floor(i / 2) + 1}. ${moveStr}`;
         }
@@ -93,98 +115,147 @@ function updateVis() {
             .style("opacity", 0)
             .remove()
     );
+    
 }
 
-const drag = d3.drag()
-    .on("start", function(event, d) {
-        const piece = d3.select(this);
-        piece.raise();
-        d.startX = d.gridX;
-        d.startY = d.gridY;
-        dx = +piece.attr("x") - event.x;
-        dy = +piece.attr("y") - event.y;
-        d3.select("#drag-tip").remove();
-    })
-    .on("drag", function(event, d) {
-        d3.select(this)
-            .attr("x", event.x + dx)
-            .attr("y", event.y + dy);
-    })
-    .on("end", function(event, d) {
-        const piece = d3.select(this);
-        const movedX = Math.max(0, Math.min(size - 1, Math.round((event.x + dx) / boxSize)));
-        const movedY = Math.max(0, Math.min(size - 1, Math.round((event.y + dy) / boxSize)));
-        if (pieces.some(p => p !== d && p.gridX === movedX && p.gridY === movedY) || (movedX == d.startX && movedY == d.startY)) {
-            piece.transition()
-                .duration(100)
-                .ease(d3.easeBackOut)
-                .attr("x", d.gridX * boxSize)
-                .attr("y", d.gridY * boxSize);
-        } else {
-            moveHistory.push({
-                id: d.id,
-                fromX: d.startX,
-                fromY: d.startY,
-                toX: movedX,
-                toY: movedY
-            });
-            
-            d.gridX = movedX;
-            d.gridY = movedY;
-            d.pos = getNotation(movedX, movedY);
-            piece.transition()
-                .duration(100)
-                .ease(d3.easeBackOut)
-                .attr("x", d.gridX * boxSize)
-                .attr("y", d.gridY * boxSize);
-            updateVis();
+function move(d, piece, movedX, movedY) {
+    const existingPiece = pieces.find(p => p.gridX === movedX && p.gridY === movedY);
+    if ((existingPiece && existingPiece.color === d.color) || (movedX == d.startX && movedY == d.startY)) {
+        piece.transition()
+            .duration(100)
+            .ease(d3.easeBackOut)
+            .attr("x", d.gridX * boxSize)
+            .attr("y", d.gridY * boxSize);
+    } else {
+        redoStack = []
+        if (existingPiece) {
+            pieces = pieces.filter(p => p.id !== existingPiece.id);
         }
-        
-    });
+        let isCastle = false;
+        let rookMove = null;
+        if (d.type === 'king' && Math.abs(movedX - d.startX) === 2) {
+            isCastle = true;
+            const isKingside = (movedX > d.startX);
+            const rookStartX = isKingside ? 7 : 0;
+            const rookEndX = isKingside ? 5 : 3;
+            const r = pieces.find(p => p.gridX === rookStartX && p.gridY === d.gridY && p.type === 'rook');
+            r.gridX = rookEndX;
+            r.startX = rookEndX;
+            rookMove = {
+                data: r,
+                fromX: rookStartX,
+                toX: rookEndX
+            };
+            d3.select(`#piece-${r.id}`)
+                .transition()
+                .duration(200)
+                .attr("x", r.gridX * boxSize);
+        }
 
-boardGroup.selectAll(".piece")
-    .data(pieces)
-    .enter()
-    .append("image")
-    .attr("xlink:href", d => "./pieces/" + d.img)
-    .attr("class", "piece")
-    .attr("x", d => d.gridX * boxSize)
-    .attr("y", d => d.gridY * boxSize)
-    .attr("width", boxSize)
-    .attr("height", boxSize)
-    .call(drag);
+        moveHistory.push({
+            piece: piece,
+            type: d.type,
+            id: d.id,
+            fromX: d.startX,
+            fromY: d.startY,
+            toX: movedX,
+            toY: movedY,
+            captured: existingPiece,
+            isCastle: isCastle,
+            rookData: rookMove ? { id: rookMove.data.id, fromX: rookMove.fromX, toX: rookMove.toX } : null
+        });
+        d.gridX = movedX;
+        d.gridY = movedY;
+        d.startX = movedX;
+        d.startY = movedY;
+        d.pos = getNotation(movedX, movedY);
+        piece.transition()
+            .duration(100)
+            .ease(d3.easeBackOut)
+            .attr("x", d.gridX * boxSize)
+            .attr("y", d.gridY * boxSize);
+        updateVis();
+    }
+}
+
+
+function updatePieces() {
+    const pieceSelection = boardGroup.selectAll(".piece")
+        .data(pieces, d => d.id);
+    pieceSelection.join(
+        enter => enter.append("image")
+            .attr("class", "piece")
+            .attr("id", d => `piece-${d.id}`)
+            .attr("width", boxSize)
+            .attr("height", boxSize)
+            .attr("xlink:href", d => `./pieces/${d.img}`)
+            .style("opacity", 0)
+            .attr("x", d => d.gridX * boxSize)
+            .attr("y", d => d.gridY * boxSize)
+            .call(drag)
+            .call(enter => enter.transition().duration(200).style("opacity", 1)),
+        
+        update => update.transition().duration(200)
+            .attr("x", d => d.gridX * boxSize)
+            .attr("y", d => d.gridY * boxSize),
+
+        exit => exit.transition().duration(150)
+            .style("opacity", 0)
+            .remove()
+    );
+}
+
 updateVis();
 
 d3.select("#undoBtn").on("click", () => {
     if (moveHistory.length === 0) return;
-    const lastMove = moveHistory.pop();
-    const pieceData = pieces.find(p => p.id === lastMove.id);
-    pieceData.gridX = lastMove.fromX;
-    pieceData.gridY = lastMove.fromY;
+    const m = moveHistory.pop();
+    redoStack.push(m)
+    const pieceData = pieces.find(p => p.id === m.id);
+    pieceData.gridX = m.fromX;
+    pieceData.gridY = m.fromY;
     pieceData.pos = getNotation(pieceData.gridX, pieceData.gridY);
-    boardGroup.selectAll(".piece")
-        .filter(p => p.id === lastMove.id)
-        .transition()
+    m.piece.transition()
         .duration(200)
         .attr("x", pieceData.gridX * boxSize)
         .attr("y", pieceData.gridY * boxSize);
+    if (m.captured) {
+        pieces.push(m.captured);
+    }
+    if (m.isCastle && m.rookData) {
+        const rook = pieces.find(p => p.id === m.rookData.id);
+        rook.gridX = m.rookData.fromX;
+        rook.startX = m.rookData.fromX;
+    }
     updateVis();
 });
 
 d3.select("#resetBtn").on("click", () => {
     moveHistory = [];
-    pieces.forEach((p, i) => {
-        p.gridX = initPos[i].gridX;
-        p.gridY = initPos[i].gridY;
-        p.pos = initPos[i].pos;
-    });
-    boardGroup.selectAll(".piece")
-        .transition()
-        .duration(100)
-        .delay((d, i) => i * 10)
-        .attr("x", d => d.gridX * boxSize)
-        .attr("y", d => d.gridY * boxSize);
+    redoStack = [];
+    pieces = initPos.map(p => ({ 
+        ...p, 
+        startX: p.gridX, 
+        startY: p.gridY 
+    }));
     updateVis();
 });
 
-
+d3.select("#redoBtn").on("click", () => {
+    if (redoStack.length > 0) {
+        const m = redoStack.pop();
+        moveHistory.push(m);
+        const d = pieces.find(p => p.id === m.id);
+        d.gridX = m.toX;
+        d.gridY = m.toY;
+        d.startX = m.toX;
+        d.startY = m.toY;
+        d.pos = getNotation(m.toX, m.toY);
+        m.piece.transition()
+            .duration(200)
+            .ease(d3.easeBackOut)
+            .attr("x", m.toX * boxSize)
+            .attr("y", m.toY * boxSize);
+        updateVis();
+    }
+});
