@@ -17,7 +17,7 @@ const addPiece = (type, color, x, y) => {
     };
     const key = `${color[0]}${mapping[type]}`;
     counts[key] = (counts[key] || 0) + 1;
-    initPos.push({id: `${key}${counts[key]}`, color:color, img: `${color}_${type}.png`, gridX: x, gridY: y, pos: getNotation(x, y), type: type});
+    initPos.push({id: `${key}${counts[key]}`, color:color, img: `${color}_${type}.png`, gridX: x, gridY: y, pos: getNotation(x, y), type: type, hasMoved: false});
 }
 for (let i = 0; i < 8; i++) {
     addPiece(layout[i], 'black', i, 0);

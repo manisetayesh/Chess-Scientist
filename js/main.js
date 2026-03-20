@@ -71,57 +71,6 @@ function getMoves() {
         .slice(0, 5);
 }
 
-function updateArrows() {
-    const movesArray = getMoves();
-    const opacityScale = d3.scaleLinear()
-    .domain([0, d3.max(movesArray, d => d.count)])
-        .range([0.5, 1]);
-    const strokeScale = d3.scaleLinear()
-    .domain([0, d3.max(movesArray, d => d.count)])
-    .range([2, 10]);
-    const arrows = boardGroup.selectAll(".heatmap-arrow")
-        .data(movesArray, d => d.move);
-    arrows.join(
-        enter => enter.append("line")
-            .attr("class", "heatmap-arrow")
-            .attr("x1", d => getPx(d.move.substring(0, 2)).x)
-            .attr("y1", d => getPx(d.move.substring(0, 2)).y)
-            .attr("x2", d => getPx(d.move.substring(2, 4)).x)
-            .attr("y2", d => getPx(d.move.substring(2, 4)).y)
-            .attr("stroke", "orange")
-            .attr("stroke-width",  d => strokeScale(d.count))
-            .attr("marker-end", "url(#arrowhead)")
-            .style("pointer-events", "none")
-            .style("opacity", 0)
-            .call(enter => enter.transition().duration(300)
-                .style("opacity", d => opacityScale(d.count))
-            ),
-        
-        update => update.transition().duration(300)
-            .style("opacity", d => opacityScale(d.count)),
-
-        exit => exit.transition().duration(200)
-            .style("opacity", 0)
-            .remove()
-    );
-}
-
-function updateVis() {
-    updatePieces();
-    d3.select("#counter").text(`Move Count: ${moveHistory.length}`);
-    const historyString = moveHistory.map((m, i) => {
-        const piece = standardNotation[m.type] || '';
-        const moveStr = `${piece}${getNotation(m.toX, m.toY)}`;
-        if (i % 2 === 0) {
-            return `${Math.floor(i / 2) + 1}. ${moveStr}`;
-        }
-        return moveStr;
-    }).join(" ");
-    d3.select("#history-log").text(`Move History: ${historyString}`);
-    updateArrows();
-    
-}
-
 function move(d, piece, movedX, movedY) {
     const existingPiece = pieces.find(p => p.gridX === movedX && p.gridY === movedY);
     if ((existingPiece && existingPiece.color === d.color) || (movedX == d.startX && movedY == d.startY)) {
@@ -137,14 +86,27 @@ function move(d, piece, movedX, movedY) {
         }
         let isCastle = false;
         let rookMove = null;
+        let castleType = null
         if (d.type === 'king' && Math.abs(movedX - d.startX) === 2) {
-            isCastle = true;
             const isKingside = (movedX > d.startX);
             const rookStartX = isKingside ? 7 : 0;
             const rookEndX = isKingside ? 5 : 3;
             const r = pieces.find(p => p.gridX === rookStartX && p.gridY === d.gridY && p.type === 'rook');
+            if (!r || r.hasMoved || d.hasMoved) {
+                piece.transition()
+                    .duration(100)
+                    .ease(d3.easeBackOut)
+                    .attr("x", d.gridX * boxSize)
+                    .attr("y", d.gridY * boxSize);
+                return
+            }
+            isCastle = true;
+            castleType = isKingside ? 'O-O' : 'O-O-O';
             r.gridX = rookEndX;
             r.startX = rookEndX;
+            r.hasMoved = true
+            
+
             rookMove = {
                 data: r,
                 fromX: rookStartX,
@@ -155,7 +117,7 @@ function move(d, piece, movedX, movedY) {
                 .duration(200)
                 .attr("x", r.gridX * boxSize);
         }
-
+        
         moveHistory.push({
             piece: piece,
             type: d.type,
@@ -166,8 +128,11 @@ function move(d, piece, movedX, movedY) {
             toY: movedY,
             captured: existingPiece,
             isCastle: isCastle,
-            rookData: rookMove ? { id: rookMove.data.id, fromX: rookMove.fromX, toX: rookMove.toX } : null
+            firstMove: !d.hasMoved,
+            rookData: rookMove ? { id: rookMove.data.id, fromX: rookMove.fromX, toX: rookMove.toX } : null,
+            castleType: castleType
         });
+        d.hasMoved = true;
         d.gridX = movedX;
         d.gridY = movedY;
         d.startX = movedX;
@@ -208,27 +173,87 @@ function updatePieces() {
     );
 }
 
+function updateArrows() {
+    const movesArray = getMoves();
+    const opacityScale = d3.scaleLinear()
+    .domain([0, d3.max(movesArray, d => d.count)])
+        .range([0.5, 1]);
+    const strokeScale = d3.scaleLinear()
+    .domain([0, d3.max(movesArray, d => d.count)])
+    .range([2, 10]);
+    const arrows = boardGroup.selectAll(".heatmap-arrow")
+        .data(movesArray, d => d.move);
+    arrows.join(
+        enter => enter.append("line")
+            .attr("class", "heatmap-arrow")
+            .attr("x1", d => getPx(d.move.substring(0, 2)).x)
+            .attr("y1", d => getPx(d.move.substring(0, 2)).y)
+            .attr("x2", d => getPx(d.move.substring(2, 4)).x)
+            .attr("y2", d => getPx(d.move.substring(2, 4)).y)
+            .attr("stroke", "orange")
+            .attr("stroke-width",  d => strokeScale(d.count))
+            .attr("marker-end", "url(#arrowhead)")
+            .style("pointer-events", "none")
+            .style("opacity", 0)
+            .call(enter => enter.transition().duration(300)
+                .style("opacity", d => opacityScale(d.count))
+            ),
+        
+        update => update.transition().duration(300)
+            .style("opacity", d => opacityScale(d.count)),
+
+        exit => exit.transition().duration(200)
+            .style("opacity", 0)
+            .remove()
+    );
+}
+
+function updateVis() {
+    updatePieces();
+    d3.select("#counter").text(`Move Count: ${moveHistory.length}`);
+    const historyString = moveHistory.map((m, i) => {
+        let moveStr = "";
+        if (m.isCastle) {
+            moveStr = m.castleType;
+        } else {
+            moveStr = `${standardNotation[m.pieceType] || ''}${getNotation(m.toX, m.toY)}`;
+        }
+        if (i % 2 === 0) {
+            return `${Math.floor(i / 2) + 1}. ${moveStr}`;
+        }
+        return moveStr;
+    }).join(" ");
+    d3.select("#history-log").text(`Move History: ${historyString}`);
+    updateArrows();
+    
+}
+
 updateVis();
 
 d3.select("#undoBtn").on("click", () => {
     if (moveHistory.length === 0) return;
     const m = moveHistory.pop();
     redoStack.push(m)
-    const pieceData = pieces.find(p => p.id === m.id);
-    pieceData.gridX = m.fromX;
-    pieceData.gridY = m.fromY;
-    pieceData.pos = getNotation(pieceData.gridX, pieceData.gridY);
+    const p = pieces.find(p => p.id === m.id);
+    p.gridX = m.fromX;
+    p.gridY = m.fromY;
+    p.pos = getNotation(p.gridX, p.gridY);
     m.piece.transition()
         .duration(200)
-        .attr("x", pieceData.gridX * boxSize)
-        .attr("y", pieceData.gridY * boxSize);
+        .attr("x", p.gridX * boxSize)
+        .attr("y", p.gridY * boxSize);
     if (m.captured) {
         pieces.push(m.captured);
     }
+    
     if (m.isCastle && m.rookData) {
         const rook = pieces.find(p => p.id === m.rookData.id);
         rook.gridX = m.rookData.fromX;
         rook.startX = m.rookData.fromX;
+        if (m.firstMove) {
+            p.hasMoved = false;
+        }
+        rook.hasMoved = false;
     }
     updateVis();
 });
