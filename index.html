@@ -25,60 +25,73 @@
         <div id="board"></div>
         <p class="tip" id="drag-tip">Drag pieces to play!</p>
     </section>
-
     <aside class="sidebar">
-        <section class="info-panel">
-            <h2>Game Statistics</h2>
-            <div id="counter"></div>
-            <div id="history-log"> </div>
-        </section>
-
-        <section class="filter-panel">
-            <h2>Control Panel</h2>
-            <div class="button-group">
-                <button id="undoBtn" class="btn-secondary">Undo</button>
-                <button id="redoBtn" class="btn-secondary">Redo</button>
-                <button id="resetBtn" class="btn-danger">Reset</button>
-            </div>
-            <div class="control-group">
-                <label>ELO Range: <span id="eloMinDisplay">1200</span> - <span id="eloMaxDisplay">2800</span></label>
-                
-                <div class="range-slider-container">
-                    <input type="range" id="eloMin" min="800" max="2800" step="50" value="1200">
-                    <input type="range" id="eloMax" min="800" max="2800" step="50" value="2800">
-                    <div class="slider-track"></div>
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="controls">Controls</button>
+            <button class="tab-btn" data-tab="openings">Openings</button>
+        </div>
+    
+        <div class="tab-content">
+            <section id="controls" class="tab-pane active">
+                <section class="info-panel">
+                    <h2>Game Statistics</h2>
+                    <div id="counter">0</div>
+                    <div id="history-log"></div>
+                </section>
+                <section class="filter-panel">
+                    <h2>Control Panel</h2>
+                    <div class="button-group">
+                        <button id="undoBtn" class="btn-secondary">Undo</button>
+                        <button id="redoBtn" class="btn-secondary">Redo</button>
+                        <button id="resetBtn" class="btn-danger">Reset</button>
+                    </div>
+                    <div class="control-group">
+                        <label>ELO Range: <span id="eloMinDisplay">1200</span> - <span id="eloMaxDisplay">2800</span></label>
+                        <div class="range-slider-container">
+                            <input type="range" id="eloMin" min="800" max="2800" step="50" value="1200">
+                            <input type="range" id="eloMax" min="800" max="2800" step="50" value="2800">
+                            <div class="slider-track"></div>
+                        </div>
+                        <div class="tick-container">
+                            <span>800</span>
+                            <span>1300</span>
+                            <span>1800</span>
+                            <span>2300</span>
+                            <span>2800</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Winner</label>
+                        <select id="resultFilter">
+                            <option value="both">All</option>
+                            <option value="white">White</option>
+                            <option value="black">Black</option>
+                            <option value="draw">Draw</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Time Control</label>
+                        <select id="incrementFilter">
+                            <option value="all">All</option>
+                            <option value="15+10">15 + 10</option>
+                            <option value="10+0">10 + 0</option>
+                            <option value="5+5">5 + 5</option>
+                        </select>
+                    </div>
+                </section> 
+            </section>
+    
+            <section id="openings" class="tab-pane">
+                <h2>Common Openings</h2>
+                <div class="opening-list" id="openingSuggestions">
                 </div>
-                <div class="tick-container">
-                    <span>800</span>
-                    <span>1300</span>
-                    <span>1800</span>
-                    <span>2300</span>
-                    <span>2800</span>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label>Winner</label>
-                <select id="resultFilter">
-                    <option value="both">All</option>
-                    <option value="white">White</option>
-                    <option value="black">Black</option>
-                    <option value="draw">Draw</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label>Time Control</label>
-                <select id="incrementFilter">
-                    <option value="all">All</option>
-                    <option value="15+10">15 + 10</option>
-                    <option value="10+0">10 + 0</option>
-                    <option value="5+5">5 + 5</option>
-                </select>
-            </div>
+            </section>
+        </div>
     </aside>
-</main>
 
+    
+</main>
+<script src="js/openings.js"></script>
 <script src="js/board.js"></script>
 <script src="js/pieces.js"></script>
 <script src="js/elo.js"></script>

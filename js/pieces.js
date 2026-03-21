@@ -1,14 +1,26 @@
-
 const initPos = []
 const getNotation = (x, y) => {
     return `${files[x]}${ranks[y]}`;
 };
-const getPx = (notation) => {
-    return {
-        x: files.indexOf(notation[0]) * boxSize + boxSize / 2,
-        y: (8 - parseInt(notation[1])) * boxSize + boxSize / 2
-    };
+
+const fromNotation = (notation, toPx) => {
+    let f = files.indexOf(notation[0])
+    let rank = (8 - parseInt(notation[1]))
+    if (toPx){
+        return {
+            x:  f * boxSize + boxSize / 2,
+            y:  rank * boxSize + boxSize / 2
+        };
+    } else {
+        return {
+            x: f,
+            y: rank
+        }
+    }
 }
+
+
+
 var counts = {}
 const addPiece = (type, color, x, y) => {
     const mapping = { 

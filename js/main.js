@@ -15,9 +15,10 @@ let redoStack = [];
 d3.csv("./data/processed.csv").then(data => {
     allGames = data.map(d => ({
         ...d,
-        moves: d.coords.replace(/[\[\]\'\s]/g, '').split(",") 
+        coords: d.coords.replace(/[\[\]\'\s]/g, '').split(",") 
     })); 
     updateVis();
+    processOpenings(allGames)
 });
 
 const drag = d3.drag()
@@ -55,12 +56,12 @@ function getMoves() {
         const resultMatch = resultPref === "both" || g.winner === resultPref;
         const timeMatch = timeControl === "all" || g.increment_code === timeControl;
        
-        const moveMatch = moveHistory.every((m, idx) => g.moves[idx] === (getNotation(m.fromX, m.fromY) + getNotation(m.toX, m.toY)));
+        const moveMatch = moveHistory.every((m, idx) => g.coords[idx] === (getNotation(m.fromX, m.fromY) + getNotation(m.toX, m.toY)));
         return moveMatch && timeMatch && resultMatch && eloMatch
     });
     const freqCounts = {};
     filteredGames.forEach(g => {
-        const nextMove = g.moves[moveHistory.length];
+        const nextMove = g.coords[moveHistory.length];
         if (nextMove) {
             freqCounts[nextMove] = (freqCounts[nextMove] || 0) + 1;
         }
@@ -73,6 +74,7 @@ function getMoves() {
 
 function move(d, piece, movedX, movedY) {
     const existingPiece = pieces.find(p => p.gridX === movedX && p.gridY === movedY);
+
     if ((existingPiece && existingPiece.color === d.color) || (movedX == d.startX && movedY == d.startY)) {
         piece.transition()
             .duration(100)
@@ -186,10 +188,10 @@ function updateArrows() {
     arrows.join(
         enter => enter.append("line")
             .attr("class", "heatmap-arrow")
-            .attr("x1", d => getPx(d.move.substring(0, 2)).x)
-            .attr("y1", d => getPx(d.move.substring(0, 2)).y)
-            .attr("x2", d => getPx(d.move.substring(2, 4)).x)
-            .attr("y2", d => getPx(d.move.substring(2, 4)).y)
+            .attr("x1", d => fromNotation(d.move.substring(0, 2), true).x)
+            .attr("y1", d => fromNotation(d.move.substring(0, 2), true).y)
+            .attr("x2", d => fromNotation(d.move.substring(2, 4), true).x)
+            .attr("y2", d => fromNotation(d.move.substring(2, 4), true).y)
             .attr("stroke", "orange")
             .attr("stroke-width",  d => strokeScale(d.count))
             .attr("marker-end", "url(#arrowhead)")
@@ -230,6 +232,7 @@ function updateVis() {
 
 updateVis();
 
+
 d3.select("#undoBtn").on("click", () => {
     if (moveHistory.length === 0) return;
     const m = moveHistory.pop();
@@ -259,6 +262,10 @@ d3.select("#undoBtn").on("click", () => {
 });
 
 d3.select("#resetBtn").on("click", () => {
+    resetVis()
+});
+
+function resetVis() {
     moveHistory = [];
     redoStack = [];
     pieces = initPos.map(p => ({ 
@@ -267,7 +274,7 @@ d3.select("#resetBtn").on("click", () => {
         startY: p.gridY 
     }));
     updateVis();
-});
+}
 
 d3.select("#redoBtn").on("click", () => {
     if (redoStack.length > 0) {

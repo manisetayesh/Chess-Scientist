@@ -40,6 +40,10 @@ body {
 	margin-bottom: 3rem;
 }
 
+.info-panel {
+	margin-bottom: 30px;
+}
+
 .game-header h1 {
 	color: #fff;
 	font-size: 2.5rem;
@@ -53,18 +57,12 @@ body {
 	margin-top: 0.5rem;
 }
 
-.sidebar>section {
-	margin-bottom: 35px;
-	background: rgba(255, 255, 255, 0.03);
-	padding: 15px;
-	border-radius: 8px;
-}
 
 h2 {
 	font-size: 0.85rem;
 	text-transform: uppercase;
 	letter-spacing: 1.5px;
-	color: #636363;
+	color: #858585;
 	border-bottom: 1px solid #312e2b;
 	padding-bottom: 0.5rem;
 	margin-bottom: 1rem;
@@ -88,22 +86,13 @@ h2 {
 	margin: 0 auto;
 	align-items: start;
 }
-
-.sidebar>section {
-	margin-bottom: 35px;
-	background: rgba(255, 255, 255, 0.03);
-	padding: 15px;
-	border-radius: 8px;
-}
+ 
 
 .control-group {
 	margin-top: 15px;
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-}
-
-.control-group label {
 	font-size: 0.8rem;
 	color: #779556;
 	font-weight: bold;
@@ -156,15 +145,9 @@ select {
 	outline: none;
 }
 
-select:focus {
-	border-color: #779556;
-}
-
 .tick-container {
 	display: flex;
 	justify-content: space-between;
-	padding: 0 5px;
-	margin-top: 5px;
 }
 
 .tick-container span {
@@ -181,4 +164,77 @@ select:focus {
 	width: 1px;
 	height: 4px;
 	background: #fff;
+}
+
+/* Tab Navigation Styling */
+.tab-nav {
+	display: flex;
+	border-bottom: 1px solid #444;
+	margin-bottom: 15px;
+}
+
+.tab-btn {
+	flex: 1;
+	padding: 12px;
+	background: transparent;
+	border: none;
+	color: #888;
+	cursor: pointer;
+	font-weight: bold;
+	transition: 0.2s;
+}
+
+.tab-btn.active {
+	color: #fff;
+	border-bottom: 2px solid #007bff;
+}
+
+.tab-pane {
+	display: none;
+}
+
+.tab-pane.active {
+	display: block;
+}
+
+.opening-scroll-area {
+	max-height: 400px;
+	overflow-y: auto;
+	margin-top: 10px;
+}
+
+.opening-item {
+	border-left: 3px solid #444;
+	transition: all 0.2s;
+	color: #aaa;
+}
+
+.opening-item:hover {
+	border-left-color: #007bff;
+	background: #fff;
+}
+
+.eco-badge {
+	background: #444;
+	padding: 2px 5px;
+	font-size: 0.7rem;
+	border-radius: 3px;
+	margin-right: 8px;
+	color: #aaa;
+}
+
+.opening-moves {
+	font-family: monospace;
+	font-size: 0.8rem;
+	color: #777;
+	margin-top: 4px;
+}
+
+.opening-search {
+	width: 100%;
+	padding: 8px;
+	background: #1a1a1a;
+	border: 1px solid #333;
+	color: white;
+	border-radius: 4px;
 }
