@@ -72,10 +72,61 @@ function getMoves() {
         .slice(0, 5);
 }
 
+function clear(fromX, fromY, toX, toY) {
+    const stepX = toX > fromX ? 1 : (toX < fromX ? -1 : 0);
+    const stepY = toY > fromY ? 1 : (toY < fromY ? -1 : 0);
+
+    let currX = fromX + stepX;
+    let currY = fromY + stepY;
+
+    while (currX !== toX || currY !== toY) {
+        if (pieces.some(p => p.gridX === currX && p.gridY === currY)) {
+            return false;
+        }
+        currX += stepX;
+        currY += stepY;
+    }
+    return true;
+}
+
+function legal(d, toX, toY) {
+    const dx = Math.abs(toX - d.startX);
+    const dy = Math.abs(toY - d.startY);
+    const dirY = d.color === 'white' ? -1 : 1; 
+    if (dx === 0 && dy === 0) return false;
+    switch (d.type) {
+        case 'pawn':
+            if (dx === 0 && toY - d.startY === dirY) {
+                return !pieces.some(p => p.gridX === toX && p.gridY === toY);
+            }
+            if (dx === 0 && !d.hasMoved && toY - d.startY === 2 * dirY) {
+                const pathBlocked = pieces.some(p => p.gridX === toX && (p.gridY === toY || p.gridY === d.startY + dirY));
+                return !pathBlocked;
+            }
+            if (dx === 1 && toY - d.startY === dirY) {
+                return pieces.some(p => p.gridX === toX && p.gridY === toY && p.color !== d.color);
+            }
+            return false;
+
+        case 'knight':
+            return (dx === 1 && dy === 2) || (dx === 2 && dy === 1);
+        case 'bishop':
+            return dx === dy && clear(d.startX, d.startY, toX, toY);
+        case 'rook':
+            return (dx === 0 || dy === 0) && clear(d.startX, d.startY, toX, toY);
+        case 'queen':
+            return (dx === dy || dx === 0 || dy === 0) && clear(d.startX, d.startY, toX, toY);
+        case 'king':
+            return dx <= 1 && dy <= 1 || (dy === 0 && dx === 2 && !d.hasMoved);
+        default:
+            return false;
+    }
+}
+
 function move(d, piece, movedX, movedY) {
     const existingPiece = pieces.find(p => p.gridX === movedX && p.gridY === movedY);
 
-    if ((existingPiece && existingPiece.color === d.color) || (movedX == d.startX && movedY == d.startY)) {
+    if ((existingPiece && existingPiece.color === d.color) || (movedX == d.startX && movedY == d.startY) || !legal(d, movedX, movedY)) {
         piece.transition()
             .duration(100)
             .ease(d3.easeBackOut)
